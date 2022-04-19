@@ -1,4 +1,4 @@
-# 获取UP全部的视频
+# 获取 UP 全部的视频
 
 ## 优点
 
@@ -13,17 +13,17 @@
 
 ## 使用方式
 
-1. 指定main.py中的mid参数
+1. 指定 main.py 中的 mid 参数
 
-[![image.png](https://i.postimg.cc/MKsyW1Hb/image.png)](https://postimg.cc/crnKhgQr)
+![image.png](https://i.postimg.cc/MKsyW1Hb/image.png)
 
-2. 安装Python依赖库
+2. 安装 Python 依赖库
 
 ```shell
 pip install -r requirements.txt
 ```
 
-3. 运行main.py
+3. 运行 main.py
 
 ```shell
 python main.py

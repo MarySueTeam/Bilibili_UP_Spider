@@ -5,6 +5,8 @@ from rich.logging import RichHandler
 import sqlite3
 import sys
 from you_get import common as you_get
+import os
+from rich.progress import track
 
 hander = RotatingFileHandler("./logs/run.log",
                              encoding="UTF-8",
@@ -109,9 +111,30 @@ class Bili_UP:
             f"[bold green blink]{data[0][0]}/{all_videos} VIDEOS DOWNLOADED[/]"
         )
 
+    def del_files(self, root_dir: str, file_type: str = 'xml'):
+        """DElETE FILES
+
+        Args:
+            file_type (str, optional): _description_. Defaults to 'xml'.
+        """
+        for root, dirs, files in os.walk(root_dir):
+            for file in files:
+                if file.endswith(file_type):
+                    os.remove(os.path.join(root, file))
+                    self.log.info(f"[bold blue]{file} DELETED[/]")
+        self.log.info(f"[bold blue]ALL OTHER FILES DELETED[/]")
+
+    def mkdir(self, path: str = "./video"):
+        if not os.path.exists(path):
+            os.mkdir(path)
+            self.log.info(f"[bold green]{path} CREATED[/]")
+        else:
+            self.log.info(f"[bold blue]{path} EXIST[/]")
+
     def run(self):
         self.get_video_list()
         self.downloader()
+        self.del_files('./video')
 
     def runx(self):
         # TODO 多线程
