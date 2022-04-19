@@ -1,5 +1,7 @@
 # 获取 UP 全部的视频
 
+[![Code Checker](https://github.com/MarySueTeam/Bilibili_UP_Spider/actions/workflows/Formater.yml/badge.svg?branch=main)](https://github.com/MarySueTeam/Bilibili_UP_Spider/actions/workflows/Formater.yml)
+
 ## 优点
 
 1. 历史数据存储
