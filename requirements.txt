@@ -12,7 +12,6 @@ msgpack==1.0.3
 neovim==0.3.1
 platformdirs==2.5.2
 Pygments==2.11.2
-pylint==2.13.5
 pynvim==0.4.3
 requests==2.27.1
 rich==12.2.0

@@ -1,12 +1,13 @@
-import requests
+import json
 import logging
-from logging.handlers import RotatingFileHandler
-from rich.logging import RichHandler
+import os
 import sqlite3
 import sys
+from logging.handlers import RotatingFileHandler
+
+import requests
+from rich.logging import RichHandler
 from you_get import common as you_get
-import os
-from rich.progress import track
 
 hander = RotatingFileHandler("./logs/run.log",
                              encoding="UTF-8",
@@ -21,9 +22,14 @@ logging.basicConfig(
 
 
 class Bili_UP:
+    """Bilibili UP Downloader"""
 
     def __init__(self, mid: str):
+        """
 
+        Args:
+            mid (str): UP mid
+        """
         self.mid = mid
         self.api_user_info = f'http://api.bilibili.com/x/space/acc/info?mid={mid}'
         self.api_video_list = f'http://api.bilibili.com/x/space/arc/search?mid={mid}&ps=30&pn='  # page number
@@ -38,11 +44,18 @@ class Bili_UP:
         self.db = sqlite3.connect('./videos_info.sqlite')
         self.log.info('[bold green]DB CONNECT SUCCESSFULLY[/]')
 
-    def get_user_info(self):
+    def get_user_info(self) -> json:
+        """get user info
+
+        Returns:
+            json: user info
+        """
         response = requests.get(self.api_user_info)
         return response.json()
 
     def get_video_list(self):
+        """get video list"""
+
         response = requests.get(self.api_video_list)
         self.log.debug(response.json())
         count = response.json()['data']['page']['count']
@@ -57,6 +70,8 @@ class Bili_UP:
         self.insert_db()
 
     def insert_db(self):
+        """insert video info to db"""
+        
         cursor = self.db.cursor()
         for item in self.video_list:
             sql = """insert into video_info(aid,bvid,title,author,description,cover_img,is_download) values ('%s','%s','%s','%s','%s','%s','%s');""" % (
@@ -78,6 +93,7 @@ class Bili_UP:
         cursor.close()
 
     def downloader(self):
+        """downloader"""
         cursor = self.db.cursor()
         sql = """select title,author,bvid from video_info where is_download=0;"""
         cursor.execute(sql)
@@ -103,6 +119,7 @@ class Bili_UP:
         cursor.close()
 
     def check_download(self, all_videos):
+        """check download count"""
         sql = """select count(*) from video_info where is_download=1;"""
         cursor = self.db.cursor()
         cursor.execute(sql)
@@ -125,6 +142,11 @@ class Bili_UP:
         self.log.info(f"[bold blue]ALL OTHER FILES DELETED[/]")
 
     def mkdir(self, path: str = "./video"):
+        """mkdir path
+
+        Args:
+            path (str, optional): _description_. Defaults to "./video".
+        """
         if not os.path.exists(path):
             os.mkdir(path)
             self.log.info(f"[bold green]{path} CREATED[/]")
@@ -132,10 +154,7 @@ class Bili_UP:
             self.log.info(f"[bold blue]{path} EXIST[/]")
 
     def run(self):
+        """run"""
         self.get_video_list()
         self.downloader()
         self.del_files('./video')
-
-    def runx(self):
-        # TODO 多线程
-        pass
