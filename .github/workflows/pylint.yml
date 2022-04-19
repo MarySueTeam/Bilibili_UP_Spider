@@ -1,6 +1,9 @@
-name: Pylint
+name: Code Checker
 
-on: [push]
+on:
+  push:
+    paths:
+      - "**.py"
 
 jobs:
   build:
@@ -14,8 +17,10 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: YAPF Python Code Formatting Check
-      uses: AlexanderMelde/yapf-action@v1.0
+    - name: YAPF Formatter
+      uses: diegovalenzuelaiturra/yapf-action@master
+      with:
+        args: . --verbose --recursive --in-place --parallel
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -23,3 +28,29 @@ jobs:
     - name: Analysing the code with pylint
       run: |
         pylint $(git ls-files '*.py')
+    - name: action metadata
+      run: |
+        echo -e "action     : ${{ github.action }}"
+        echo -e "actor      : ${{ github.actor }}"
+        echo -e "event_name : ${{ github.event_name }}"
+        echo -e "job        : ${{ github.job }}"
+        echo -e "ref        : ${{ github.ref }}"
+        echo -e "repository : ${{ github.repository }}"
+        echo -e "run_id     : ${{ github.run_id }}"
+        echo -e "sha        : ${{ github.sha }}"
+        echo -e "workflow   : ${{ github.workflow }}"
+        echo -e "workspace  : ${{ github.workspace }}"
+    - name: config github
+      run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+    - name: add changes
+      run: |
+        git add .
+    - name: commit changes
+      run: |
+        git commit -m "Automation: Checker & Formatter" --all | exit 0
+    - name: push changes
+      if: github.ref == 'refs/heads/main'
+      run: |
+        git push
