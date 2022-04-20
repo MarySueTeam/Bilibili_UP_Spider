@@ -4,7 +4,6 @@ import os
 import sqlite3
 import sys
 from logging.handlers import RotatingFileHandler
-from time import sleep
 
 import requests
 from rich.logging import RichHandler
