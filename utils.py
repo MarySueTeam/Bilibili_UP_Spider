@@ -4,6 +4,7 @@ import os
 import sqlite3
 import sys
 from logging.handlers import RotatingFileHandler
+from time import sleep
 
 import requests
 from rich.logging import RichHandler
@@ -14,22 +15,23 @@ hander = RotatingFileHandler("./logs/run.log",
                              maxBytes=1024 * 1024 * 10,
                              backupCount=10)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
-    datefmt="%m-%d %H:%M",
-    handlers=[RichHandler(rich_tracebacks=True, markup=True), hander])
+
 
 
 class Bili_UP:
     """Bilibili UP Downloader"""
 
-    def __init__(self, mid: str):
+    def __init__(self, mid: str, log_level: str="INFO"):
         """
 
         Args:
             mid (str): UP mid
         """
+        logging.basicConfig(
+            level=log_level.upper(),
+            format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
+            datefmt="%m-%d %H:%M",
+            handlers=[RichHandler(rich_tracebacks=True, markup=True), hander])
         self.mid = mid
         self.api_user_info = f'http://api.bilibili.com/x/space/acc/info?mid={mid}'
         self.api_video_list = f'http://api.bilibili.com/x/space/arc/search?mid={mid}&ps=30&pn='  # page number
@@ -102,19 +104,31 @@ class Bili_UP:
             self.log.info(f"[bold green]ALL VIDEOS DOWNLOADED[/]")
         else:
             for row in data:
-                self.check_download_count()
-                video_url = self.video_url.format(row[2])
-                self.log.debug(f"video_url -> {video_url}")
-                self.log.info(f"[bold blue]{row[0]} START DOWNLOADING[/]")
-                sys.argv = [
-                    'you-get', '-o', self.videos_path + str(row[1]), video_url
-                ]
-                you_get.main()
-                self.log.info(f"[bold blue]{row[0]}TIME SYNC START[/]")
-                self.change_time(
-                    os.path.join(self.videos_path, row[1], row[0] + '.mp4'),
-                    row[3])
-                self.log.info(f"[bold green]{row[0]}TIME SYNC SUCCESSFULLY[/]")
+                video_file_path = os.path.join(self.videos_path, row[1],
+                                               row[0] + '.mp4')
+                video_file_path_without_ext = os.path.join(self.videos_path, row[1], row[0])
+                self.log.debug(f"video_file_path: {video_file_path}")
+                if os.path.exists(video_file_path):
+                    self.log.info(
+                        f"[bold green]{row[0]} HAD BEEN DOWNLOADED SKIP[/]")
+                    self.log.info(f"[bold blue]{row[0]}FOR TIME SYNC START[/]")
+                    self.change_time(video_file_path, row[3])
+                    self.log.info(
+                        f"[bold green]{row[0]}FOR TIME SYNC SUCCESSFULLY[/]")
+                else:
+                    self.check_download_count()
+                    video_url = self.video_url.format(row[2])
+                    self.log.debug(f"video_url -> {video_url}")
+                    self.log.info(f"[bold blue]{row[0]} START DOWNLOADING[/]")
+                    sys.argv = [
+                        'you-get', '-O', video_file_path_without_ext,
+                        video_url
+                    ]
+                    you_get.main()
+                    self.log.info(f"[bold blue]{row[0]}TIME SYNC START[/]")
+                    self.change_time(video_file_path, row[3])
+                    self.log.info(
+                        f"[bold green]{row[0]}TIME SYNC SUCCESSFULLY[/]")
                 _sql = """update video_info SET is_download=1 where bvid='%s';""" % (
                     row[2])
                 try:
@@ -127,7 +141,7 @@ class Bili_UP:
 
     def change_time(self, file_path: str, time_stamp: int):
         """change file date and time sync to origin file time"""
-        print(file_path)
+        self.log.debug(f"file_path: {file_path}")
         os.utime(file_path, (time_stamp, time_stamp))
 
     def check_download_count(self):
@@ -144,6 +158,7 @@ class Bili_UP:
         )
 
     def del_files(self, root_dir: str, file_type: str = 'xml'):
+
         """DElETE FILES
 
         Args:
