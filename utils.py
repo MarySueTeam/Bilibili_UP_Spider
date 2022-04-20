@@ -15,12 +15,10 @@ hander = RotatingFileHandler("./logs/run.log",
                              backupCount=10)
 
 
-
-
 class Bili_UP:
     """Bilibili UP Downloader"""
 
-    def __init__(self, mid: str, log_level: str="INFO"):
+    def __init__(self, mid: str, log_level: str = "INFO"):
         """
 
         Args:
@@ -41,6 +39,7 @@ class Bili_UP:
         self.log = logging.getLogger("Bili_UP " + self.user_name)
         self.log.info("[bold green]LOG LOAD SUCCESSFULLY[/]")
         self.log.info(f"[bold blue blink]RUN FOR {self.user_name}[/]")
+        self.make_path(self.videos_path)
         self.video_list = []
 
         self.db = sqlite3.connect('./videos_info.sqlite')
@@ -99,13 +98,15 @@ class Bili_UP:
         sql = """select title,author,bvid,pubtime from video_info where is_download=0;"""
         cursor.execute(sql)
         data = cursor.fetchall()
+
         if len(data) == 0:
             self.log.info(f"[bold green]ALL VIDEOS DOWNLOADED[/]")
         else:
             for row in data:
-                video_file_path = os.path.join(self.videos_path, row[1],
+                videos_dir = os.path.join(self.videos_path, row[1])
+                self.make_path(videos_dir)
+                video_file_path = os.path.join(videos_dir,
                                                row[0] + '.mp4')
-                video_file_path_without_ext = os.path.join(self.videos_path, row[1], row[0])
                 self.log.debug(f"video_file_path: {video_file_path}")
                 if os.path.exists(video_file_path):
                     self.log.info(
@@ -120,8 +121,8 @@ class Bili_UP:
                     self.log.debug(f"video_url -> {video_url}")
                     self.log.info(f"[bold blue]{row[0]} START DOWNLOADING[/]")
                     sys.argv = [
-                        'you-get', '-O', video_file_path_without_ext,
-                        video_url
+                        'you-get', '-O', row[0], '-o',
+                        videos_dir, video_url
                     ]
                     you_get.main()
                     self.log.info(f"[bold blue]{row[0]}TIME SYNC START[/]")
@@ -136,6 +137,7 @@ class Bili_UP:
                 except:
                     self.db.rollback()
                 self.log.info(f"[bold green]{row[0]} DOWNLOADED[/]")
+                self.del_files(videos_dir)
         cursor.close()
 
     def change_time(self, file_path: str, time_stamp: int):
@@ -157,7 +159,6 @@ class Bili_UP:
         )
 
     def del_files(self, root_dir: str, file_type: str = 'xml'):
-
         """DElETE FILES
 
         Args:
@@ -168,10 +169,9 @@ class Bili_UP:
                 if file.endswith(file_type):
                     os.remove(os.path.join(root, file))
                     self.log.info(f"[bold blue]{file} DELETED[/]")
-        self.log.info(f"[bold blue]ALL OTHER FILES DELETED[/]")
 
-    def mkdir(self, path: str = "./video"):
-        """mkdir path
+    def make_path(self, path: str = "./video"):
+        """make path
 
         Args:
             path (str, optional): _description_. Defaults to "./video".
@@ -186,4 +186,3 @@ class Bili_UP:
         """run"""
         self.get_video_list()
         self.downloader()
-        self.del_files('./video')
