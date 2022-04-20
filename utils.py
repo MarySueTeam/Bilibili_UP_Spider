@@ -100,7 +100,6 @@ class Bili_UP:
         data = cursor.fetchall()
         if len(data) == 0:
             self.log.info(f"[bold green]ALL VIDEOS DOWNLOADED[/]")
-        all_videos = len(data)
         for row in data:
             video_url = self.video_url.format(row[2])
             self.log.debug(f"video_url -> {video_url}")
@@ -115,17 +114,20 @@ class Bili_UP:
             except:
                 self.db.rollback()
             self.log.info(f"[bold green]{row[0]} DOWNLOADED[/]")
-            self.check_download(all_videos)
+            self.check_download_count()
         cursor.close()
 
-    def check_download(self, all_videos):
+    def check_download_count(self):
         """check download count"""
-        sql = """select count(*) from video_info where is_download=1;"""
+        get_downloaded_count_sql = """select count(*) from video_info where is_download=1;"""
+        get_all_count_sql = """select count(*) from video_info;"""
         cursor = self.db.cursor()
-        cursor.execute(sql)
-        data = cursor.fetchall()
+        cursor.execute(get_downloaded_count_sql)
+        downloaded_count = cursor.fetchall()[0][0]
+        cursor.execute(get_all_count_sql)
+        all_count = cursor.fetchall()[0][0]
         self.log.info(
-            f"[bold green blink]{data[0][0]}/{all_videos} VIDEOS DOWNLOADED[/]"
+            f"[bold green blink]{downloaded_count}/{all_count} VIDEOS DOWNLOADED[/]"
         )
 
     def del_files(self, root_dir: str, file_type: str = 'xml'):
