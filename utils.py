@@ -35,6 +35,7 @@ class Bili_UP:
         self.api_video_list = f'http://api.bilibili.com/x/space/arc/search?mid={mid}&ps=30&pn='  # page number
         self.video_url = "https://www.bilibili.com/video/{0}"
         self.user_name = self.get_user_info()['data']['name']
+        self.videos_path = './video/'
 
         self.log = logging.getLogger("Bili_UP " + self.user_name)
         self.log.info("[bold green]LOG LOAD SUCCESSFULLY[/]")
@@ -71,12 +72,11 @@ class Bili_UP:
 
     def insert_db(self):
         """insert video info to db"""
-        
         cursor = self.db.cursor()
         for item in self.video_list:
-            sql = """insert into video_info(aid,bvid,title,author,description,cover_img,is_download) values ('%s','%s','%s','%s','%s','%s','%s');""" % (
+            sql = """insert into video_info(aid,bvid,title,author,description,cover_img,pubtime,is_download) values ('%s','%s','%s','%s','%s','%s','%s','%s');""" % (
                 item['aid'], item['bvid'], item['title'], item['author'],
-                item['description'], item['pic'], '0')
+                item['description'], item['pic'], item['created'], '0')
             try:
                 cursor.execute(sql)
                 self.db.commit()
@@ -95,27 +95,40 @@ class Bili_UP:
     def downloader(self):
         """downloader"""
         cursor = self.db.cursor()
-        sql = """select title,author,bvid from video_info where is_download=0;"""
+        sql = """select title,author,bvid,pubtime from video_info where is_download=0;"""
         cursor.execute(sql)
         data = cursor.fetchall()
         if len(data) == 0:
             self.log.info(f"[bold green]ALL VIDEOS DOWNLOADED[/]")
-        for row in data:
-            video_url = self.video_url.format(row[2])
-            self.log.debug(f"video_url -> {video_url}")
-            sys.argv = ['you-get', '-o', "./video/" + str(row[1]), video_url]
-            you_get.main()
-            self.log.info(f"[bold blue]{row[0]} START DOWNLOADING[/]")
-            _sql = """update video_info SET is_download=1 where bvid='%s';""" % (
-                row[2])
-            try:
-                cursor.execute(_sql)
-                self.db.commit()
-            except:
-                self.db.rollback()
-            self.log.info(f"[bold green]{row[0]} DOWNLOADED[/]")
-            self.check_download_count()
+        else:
+            for row in data:
+                self.check_download_count()
+                video_url = self.video_url.format(row[2])
+                self.log.debug(f"video_url -> {video_url}")
+                self.log.info(f"[bold blue]{row[0]} START DOWNLOADING[/]")
+                sys.argv = [
+                    'you-get', '-o', self.videos_path + str(row[1]), video_url
+                ]
+                you_get.main()
+                self.log.info(f"[bold blue]{row[0]}TIME SYNC START[/]")
+                self.change_time(
+                    os.path.join(self.videos_path, row[1], row[0] + '.mp4'),
+                    row[3])
+                self.log.info(f"[bold green]{row[0]}TIME SYNC SUCCESSFULLY[/]")
+                _sql = """update video_info SET is_download=1 where bvid='%s';""" % (
+                    row[2])
+                try:
+                    cursor.execute(_sql)
+                    self.db.commit()
+                except:
+                    self.db.rollback()
+                self.log.info(f"[bold green]{row[0]} DOWNLOADED[/]")
         cursor.close()
+
+    def change_time(self, file_path: str, time_stamp: int):
+        """change file date and time sync to origin file time"""
+        print(file_path)
+        os.utime(file_path, (time_stamp, time_stamp))
 
     def check_download_count(self):
         """check download count"""
@@ -127,7 +140,7 @@ class Bili_UP:
         cursor.execute(get_all_count_sql)
         all_count = cursor.fetchall()[0][0]
         self.log.info(
-            f"[bold green blink]{downloaded_count}/{all_count} VIDEOS DOWNLOADED[/]"
+            f"[bold black on blue] VIDEOS INFO [/]: [bold black on green] ALL [/] [bold underline]{all_count}[/] [bold black on green] DOWNLOADED [/] [bold underline]{downloaded_count}[/] [bold white on red] NEED DOWNLOAD [/] [bold underline]{all_count-downloaded_count}[/]"
         )
 
     def del_files(self, root_dir: str, file_type: str = 'xml'):
