@@ -30,6 +30,11 @@ class Bili_UP:
             datefmt="%m-%d %H:%M",
             handlers=[RichHandler(rich_tracebacks=True, markup=True), hander])
         self.mid = mid
+        self.haeders = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36",
+            "Referer": "https://space.bilibili.com/%s" % self.mid,
+            "Origin": "https://space.bilibili.com"
+        }
         self.api_user_info = f'http://api.bilibili.com/x/space/acc/info?mid={mid}'
         self.api_video_list = f'http://api.bilibili.com/x/space/arc/search?mid={mid}&ps=30&pn='  # page number
         self.video_url = "https://www.bilibili.com/video/{0}"
@@ -37,13 +42,13 @@ class Bili_UP:
         self.videos_path = './video/'
 
         self.log = logging.getLogger("Bili_UP " + self.user_name)
-        self.log.info("[bold green]LOG LOAD SUCCESSFULLY[/]")
-        self.log.info(f"[bold blue blink]RUN FOR {self.user_name}[/]")
+        self.log.info("[bold black on green] LOG LOAD SUCCESSFULLY [/]")
+        self.log.info(f"[bold white on blue] RUN FOR {self.user_name} [/]")
         self.make_path(self.videos_path)
         self.video_list = []
 
         self.db = sqlite3.connect('./videos_info.sqlite')
-        self.log.info('[bold green]DB CONNECT SUCCESSFULLY[/]')
+        self.log.info('[bold black on green] DB CONNECT SUCCESSFULLY [/]')
 
     def get_user_info(self) -> json:
         """get user info
@@ -51,22 +56,22 @@ class Bili_UP:
         Returns:
             json: user info
         """
-        response = requests.get(self.api_user_info)
+        response = requests.get(self.api_user_info,headers=self.haeders)
         return response.json()
 
     def get_video_list(self):
         """get video list"""
 
-        response = requests.get(self.api_video_list)
+        response = requests.get(self.api_video_list,headers=self.haeders)
         self.log.debug(response.json())
         count = response.json()['data']['page']['count']
         for i in range(count // 30 + 1):
-            res = requests.get(self.api_video_list + str(i + 1))
+            res = requests.get(self.api_video_list + str(i + 1),headers=self.haeders)
             self.log.debug(res.json())
             self.video_list += res.json()['data']['list']['vlist']
 
         self.log.info(
-            f"[bold green]GET {len(self.video_list)} VIDEOS FOR {self.user_name}[/]"
+            f"[bold black on white] GET {len(self.video_list)} VIDEOS FOR {self.user_name} [/]"
         )
         self.insert_db()
 
@@ -81,12 +86,15 @@ class Bili_UP:
                 cursor.execute(sql)
                 self.db.commit()
                 self.log.debug(
-                    f"[bold green]INSERT {item['bvid']} SUCCESSFULLY[/]")
+                    f"[bold black on green]INSERT {item['bvid']} SUCCESSFULLY[/]"
+                )
             except sqlite3.IntegrityError:
-                self.log.info(f"[bold blue]{item['title']} HAS DOWNLOADED[/]")
+                self.log.info(
+                    f"[bold black on green] HAS DOWNLOADED [/][bold] {item['title']} [/]"
+                )
                 self.db.rollback()
             except sqlite3.OperationalError as e:
-                self.log.error(f"[bold red]INSERT FAILED[/]")
+                self.log.error(f"[bold red on white]INSERT FAILED[/]")
                 self.log.debug(sql)
                 self.log.error(e)
                 self.db.rollback()
@@ -100,35 +108,42 @@ class Bili_UP:
         data = cursor.fetchall()
 
         if len(data) == 0:
-            self.log.info(f"[bold green]ALL VIDEOS DOWNLOADED[/]")
+            self.log.info(f"[bold black on white] ALL VIDEOS DOWNLOADED [/]")
         else:
             for row in data:
                 videos_dir = os.path.join(self.videos_path, row[1])
                 self.make_path(videos_dir)
-                video_file_path = os.path.join(videos_dir,
-                                               row[0] + '.mp4')
+                video_file_path = os.path.join(videos_dir, row[0] + '.mp4')
                 self.log.debug(f"video_file_path: {video_file_path}")
                 if os.path.exists(video_file_path):
                     self.log.info(
-                        f"[bold green]{row[0]} HAD BEEN DOWNLOADED SKIP[/]")
-                    self.log.info(f"[bold blue]{row[0]}FOR TIME SYNC START[/]")
+                        f"[bold black on green] HAD BEEN DOWNLOADED SKIP [/][bold white on blue] {row[0]} [/]"
+                    )
+                    self.log.info(
+                        f"[bold black on blue] FOR TIME SYNC START [/][bold white on blue] {row[0]} [/]"
+                    )
                     self.change_time(video_file_path, row[3])
                     self.log.info(
-                        f"[bold green]{row[0]}FOR TIME SYNC SUCCESSFULLY[/]")
+                        f"[bold black on green] FOR TIME SYNC SUCCESSFULLY [/][bold white on blue] {row[0]} [/]"
+                    )
                 else:
                     self.check_download_count()
                     video_url = self.video_url.format(row[2])
                     self.log.debug(f"video_url -> {video_url}")
-                    self.log.info(f"[bold blue]{row[0]} START DOWNLOADING[/]")
+                    self.log.info(
+                        f"[bold white on blue] {row[0]} [/][bold blue] START DOWNLOADING[/]"
+                    )
                     sys.argv = [
-                        'you-get', '-O', row[0], '-o',
-                        videos_dir, video_url
+                        'you-get', '-O', row[0], '-o', videos_dir, video_url
                     ]
                     you_get.main()
-                    self.log.info(f"[bold blue]{row[0]}TIME SYNC START[/]")
+                    self.log.info(
+                        f"[bold white on blue] {row[0]} [/][bold blue] TIME SYNC START[/]"
+                    )
                     self.change_time(video_file_path, row[3])
                     self.log.info(
-                        f"[bold green]{row[0]}TIME SYNC SUCCESSFULLY[/]")
+                        f"[bold green] TIME SYNC SUCCESSFULLY [/][bold white on blue] {row[0]} [/]"
+                    )
                 _sql = """update video_info SET is_download=1 where bvid='%s';""" % (
                     row[2])
                 try:
@@ -136,7 +151,9 @@ class Bili_UP:
                     self.db.commit()
                 except:
                     self.db.rollback()
-                self.log.info(f"[bold green]{row[0]} DOWNLOADED[/]")
+                self.log.info(
+                    f"[bold green] DOWNLOADED [/][bold white on blue] {row[0]} [/]"
+                )
                 self.del_files(videos_dir)
         cursor.close()
 
@@ -178,9 +195,9 @@ class Bili_UP:
         """
         if not os.path.exists(path):
             os.mkdir(path)
-            self.log.info(f"[bold green]{path} CREATED[/]")
+            self.log.debug(f"[bold green]{path} CREATED[/]")
         else:
-            self.log.info(f"[bold blue]{path} EXIST[/]")
+            self.log.debug(f"[bold blue]{path} EXIST[/]")
 
     def run(self):
         """run"""
